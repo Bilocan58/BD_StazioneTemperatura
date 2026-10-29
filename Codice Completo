@@ -1,0 +1,104 @@
+Codice Integrato Completo
+In questo sketch finale:
+
+1)L'ESP32 si connette al Wi-Fi e scarica l'ora esatta dal server NTP.
+
+2)L'ora NTP viene usata per aggiornare l'RTC (DS3231).
+
+3)Successivamente, la data e l'ora vengono lette dall'RTC per garantire il funzionamento anche offline.
+
+4)Viene letta la temperatura dal sensore DS18B20 e stampata a schermo insieme al timestamp.
+
+#include <WiFi.h>
+#include <Wire.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include "RTClib.h"
+#include "time.h"
+
+// Credenziali Wi-Fi
+const char* ssid       = "NOME_DELLA_TUA_RETE";
+const char* password   = "PASSWORD_DELLA_RETE";
+
+// Configurazione NTP
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;      // GMT+1
+const int   daylightOffset_sec = 3600; // Ora legale
+
+// Pin DS18B20
+#define ONE_WIRE_BUS 4
+
+// Inizializzazione oggetti
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+RTC_DS3231 rtc;
+
+void aggiornaRTCdaNTP() {
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    rtc.adjust(DateTime(
+      timeinfo.tm_year + 1900,
+      timeinfo.tm_mon + 1,
+      timeinfo.tm_mday,
+      timeinfo.tm_hour,
+      timeinfo.tm_min,
+      timeinfo.tm_sec
+    ));
+    Serial.println("RTC sincronizzato con successo da NTP.");
+  } else {
+    Serial.println("Impossibile recuperare l'ora NTP.");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Inizializzazione Sensore Temperatura
+  sensors.begin();
+
+  // Inizializzazione RTC
+  if (!rtc.begin()) {
+    Serial.println("Errore: Modulo RTC non trovato!");
+  }
+
+  // Tenta la connessione Wi-Fi per la sincronizzazione iniziale
+  Serial.print("Connessione al WiFi...");
+  WiFi.begin(ssid, password);
+  
+  int tentativi = 0;
+  while (WiFi.status() != WL_CONNECTED && tentativi < 20) {
+    delay(500);
+    Serial.print(".");
+    tentativi++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nWiFi connesso!");
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    delay(2000); // Attesa sincronizzazione della rete
+    aggiornaRTCdaNTP();
+    WiFi.disconnect(true); // Disconnette il WiFi per risparmiare energia se non necessario
+  } else {
+    Serial.println("\nImpossibile connettersi al WiFi. Utilizzo orario RTC memorizzato.");
+  }
+}
+
+void loop() {
+  // Lettura Temperatura
+  sensors.requestTemperatures();
+  float tempC = sensors.getTempCByIndex(0);
+
+  // Lettura Data e Ora da RTC
+  DateTime now = rtc.now();
+
+  // Stampa dati formattati su Serial Monitor
+  char bufferInfo[64];
+  snprintf(bufferInfo, sizeof(bufferInfo), "[%04d-%02d-%02d %02d:%02d:%02d] Temp: %.2f °C",
+           now.year(), now.month(), now.day(),
+           now.hour(), now.minute(), now.second(),
+           tempC);
+
+  Serial.println(bufferInfo);
+
+  delay(5000); // Intervallo di campionamento
+}
