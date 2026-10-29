@@ -1,0 +1,32 @@
+Per utilizzare il DS18B20 con ESP32 è necessario installare le librerie OneWire e DallasTemperature nell'IDE di Arduino.
+Collega il pin dati del DS18B20 a un GPIO dell'ESP32 (es. GPIO 4) con una resistenza di pull-up da 4.7 kΩ tra VCC e Dati.
+
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// Pin collegato al pin dati del DS18B20
+#define ONE_WIRE_BUS 4
+
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+void setup() {
+  Serial.begin(115200);
+  sensors.begin();
+  Serial.println("Inizializzazione DS18B20 completata.");
+}
+
+void loop() {
+  sensors.requestTemperatures(); 
+  float tempC = sensors.getTempCByIndex(0);
+
+  if (tempC != DEVICE_DISCONNECTED_C) {
+    Serial.print("Temperatura: ");
+    Serial.print(tempC);
+    Serial.println(" °C");
+  } else {
+    Serial.println("Errore: Impossibile leggere dal sensore DS18B20!");
+  }
+
+  delay(2000);
+}
