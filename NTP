@@ -1,0 +1,44 @@
+L'ESP32 include funzioni native per connettersi al WiFi e sincronizzare l'orologio interno usando un server NTP.
+
+#include <WiFi.h>
+#include "time.h"
+
+const char* ssid       = "NOME_DELLA_TUA_RETE";
+const char* password   = "PASSWORD_DELLA_RETE";
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;      // UTC +1 per l'Italia
+const int   daylightOffset_sec = 3600; // Ora legale (+1 ora)
+
+void setup() {
+  Serial.begin(115200);
+
+  // Connessione Wi-Fi
+  Serial.print("Connessione a ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi Connesso!");
+
+  // Configurazione orario da NTP
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  
+  // Attesa sincronizzazione
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Errore nel recupero dell'ora NTP");
+    return;
+  }
+  Serial.println("Ora aggiornata da NTP con successo.");
+}
+
+void loop() {
+  struct tm timeinfo;
+  if(getLocalTime(&timeinfo)){
+    Serial.println(&timeinfo, "%Y-%m-%d %H:%M:%S");
+  }
+  delay(1000);
+}
