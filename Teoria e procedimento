@@ -1,0 +1,3 @@
+Prima di iniziare si va a installare su arduino ide le librerie neccessari, nel nostro caso sono:OneWire.h,DallasTemperature.h.
+Per costruire il circuito, colleghiamo il sensore di temperatura (Ds18b20) al microcontrollore (esp32 c3) coi vari collegamenti a 3v3, Gnd, D4.
+Collegato una volta sul pc, e caricato il codice del sensore, andando su serial monitor possiamo visualizzare la temperatura attuale del nostro ambiente.
